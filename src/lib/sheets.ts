@@ -138,7 +138,7 @@ async function buildSheetsSnapshot(date = getTodayDateString()) {
   const tasksByKid = new Map<string, KidTasksResponse>();
 
   activeKids.forEach((kid) => {
-    const seededTasks = [
+    const seededTasks: KidTasksResponse["tasks"] = [
       ...templates
         .filter((template) => template.kidId === kid.kidId)
         .map((template) => ({
