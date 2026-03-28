@@ -1,4 +1,4 @@
-import { getTodayDateString } from "@/lib/date";
+import { getTodayDateString, normalizeDateString } from "@/lib/date";
 import { buildTaskSummary } from "@/lib/taskSummary";
 import type { Kid, KidTasksResponse, ParentDashboardData } from "@/lib/types";
 
@@ -81,11 +81,21 @@ async function writeDailyProgressRows(rows: string[][]) {
   });
 }
 
+async function readDailyProgressRows() {
+  const rows = await readTab("DailyProgress");
+
+  return rows.map((row) => ({
+    ...row,
+    date: normalizeDateString(row.date)
+  }));
+}
+
 async function buildSheetsSnapshot(date = getTodayDateString()) {
+  const targetDate = normalizeDateString(date);
   const [kidsRows, templatesRows, dailyRows, oneTimeRows] = await Promise.all([
     readTab("Kids"),
     readTab("ChoreTemplates"),
-    readTab("DailyProgress"),
+    readDailyProgressRows(),
     readTab("OneTimeTasks")
   ]);
 
@@ -107,7 +117,7 @@ async function buildSheetsSnapshot(date = getTodayDateString()) {
     5: "fri",
     6: "sat"
   } as const;
-  const dateDay = dayNames[new Date(`${date}T12:00:00`).getDay() as keyof typeof dayNames];
+  const dateDay = dayNames[new Date(`${targetDate}T12:00:00`).getDay() as keyof typeof dayNames];
 
   const templates = templatesRows
     .filter((row) => row.kid_id)
@@ -118,22 +128,22 @@ async function buildSheetsSnapshot(date = getTodayDateString()) {
       kidId: row.kid_id,
       title: row.title,
       category: row.category || "Chores",
-      dayOfWeek: row.day_of_week,
+      dayOfWeek: row.day_of_week.toLowerCase(),
       required: normalizeBoolean(row.required)
     }))
     .filter((row) => row.dayOfWeek === "daily" || row.dayOfWeek === dateDay);
 
   const oneTimeTasks = oneTimeRows
-    .filter((row) => row.kid_id && row.date === date)
+    .filter((row) => row.kid_id && normalizeDateString(row.date) === targetDate)
     .map((row, index) => ({
-      taskId: row.task_id || `one-time-${date}-${row.kid_id}-${index}`,
+      taskId: row.task_id || `one-time-${targetDate}-${row.kid_id}-${index}`,
       kidId: row.kid_id,
       title: row.title,
       category: row.category || "Today Only",
       required: normalizeBoolean(row.required)
     }));
 
-  const progressRows = dailyRows.filter((row) => row.date === date);
+  const progressRows = dailyRows.filter((row) => normalizeDateString(row.date) === targetDate);
 
   const tasksByKid = new Map<string, KidTasksResponse>();
 
@@ -142,7 +152,7 @@ async function buildSheetsSnapshot(date = getTodayDateString()) {
       ...templates
         .filter((template) => template.kidId === kid.kidId)
         .map((template) => ({
-          date,
+          date: targetDate,
           kidId: kid.kidId,
           taskId: template.templateId,
           taskType: "template" as const,
@@ -159,7 +169,7 @@ async function buildSheetsSnapshot(date = getTodayDateString()) {
       ...oneTimeTasks
         .filter((task) => task.kidId === kid.kidId)
         .map((task) => ({
-          date,
+          date: targetDate,
           kidId: kid.kidId,
           taskId: task.taskId,
           taskType: "one-time" as const,
@@ -195,7 +205,7 @@ async function buildSheetsSnapshot(date = getTodayDateString()) {
       });
 
     tasksByKid.set(kid.kidId, {
-      date,
+      date: targetDate,
       kid: {
         kidId: kid.kidId,
         name: kid.name
@@ -233,7 +243,9 @@ const sheetsRepository: Repository = {
   },
   async updateTaskProgress(input) {
     const date = input.date ?? getTodayDateString();
-    const snapshot = await buildSheetsSnapshot(date);
+    const normalizedDate = normalizeDateString(date);
+    const snapshot = await buildSheetsSnapshot(normalizedDate);
+    const allDailyRows = await readDailyProgressRows();
     const taskSet = snapshot.tasksByKid.get(input.kidId);
     if (!taskSet) {
       throw new Error("Kid not found");
@@ -277,6 +289,21 @@ const sheetsRepository: Repository = {
 
     const allRows = [
       ["date", "kid_id", "task_id", "chore_title", "status", "started_at", "completed", "completed_at", "duration_seconds", "submitted", "note"],
+      ...allDailyRows
+        .filter((row) => row.date !== normalizedDate)
+        .map((row) => [
+          row.date,
+          row.kid_id,
+          row.task_id || "",
+          row.chore_title || "",
+          row.status || "not-started",
+          row.started_at || "",
+          row.completed || "FALSE",
+          row.completed_at || "",
+          row.duration_seconds || "0",
+          row.submitted || "FALSE",
+          row.note || ""
+        ]),
       ...snapshot.activeKids.flatMap((kid) => {
         const tasks = kid.kidId === input.kidId ? updatedRows : snapshot.tasksByKid.get(kid.kidId)?.tasks ?? [];
         return tasks.map((task) => [
@@ -320,8 +347,24 @@ const sheetsRepository: Repository = {
     }));
 
     const snapshot = await buildSheetsSnapshot(taskSet.date);
+    const allDailyRows = await readDailyProgressRows();
     const allRows = [
       ["date", "kid_id", "task_id", "chore_title", "status", "started_at", "completed", "completed_at", "duration_seconds", "submitted", "note"],
+      ...allDailyRows
+        .filter((row) => row.date !== taskSet.date)
+        .map((row) => [
+          row.date,
+          row.kid_id,
+          row.task_id || "",
+          row.chore_title || "",
+          row.status || "not-started",
+          row.started_at || "",
+          row.completed || "FALSE",
+          row.completed_at || "",
+          row.duration_seconds || "0",
+          row.submitted || "FALSE",
+          row.note || ""
+        ]),
       ...snapshot.activeKids.flatMap((kid) => {
         const tasks = kid.kidId === kidId ? rows : snapshot.tasksByKid.get(kid.kidId)?.tasks ?? [];
         return tasks.map((task) => [
@@ -364,16 +407,16 @@ const sheetsRepository: Repository = {
     });
 
     return {
-      date: date ?? getTodayDateString(),
+      date: normalizeDateString(date ?? getTodayDateString()),
       kids
     };
   },
   async resetDay(date) {
-    const snapshot = await buildSheetsSnapshot(date);
-    const targetDate = date ?? getTodayDateString();
+    const allDailyRows = await readDailyProgressRows();
+    const targetDate = normalizeDateString(date ?? getTodayDateString());
     const rows = [
       ["date", "kid_id", "task_id", "chore_title", "status", "started_at", "completed", "completed_at", "duration_seconds", "submitted", "note"],
-      ...snapshot.progressRows
+      ...allDailyRows
         .filter((row) => row.date !== targetDate)
         .map((row) => [
           row.date,

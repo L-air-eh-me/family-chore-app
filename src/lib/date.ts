@@ -14,6 +14,32 @@ export function getTodayDateString() {
   return formatter.format(new Date());
 }
 
+export function normalizeDateString(value: string | null | undefined) {
+  const raw = String(value ?? "").trim();
+
+  if (!raw) {
+    return "";
+  }
+
+  const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (isoMatch) {
+    return raw;
+  }
+
+  const shortIsoPrefixMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s].*)?$/);
+  if (shortIsoPrefixMatch) {
+    return `${shortIsoPrefixMatch[1]}-${shortIsoPrefixMatch[2]}-${shortIsoPrefixMatch[3]}`;
+  }
+
+  const slashMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (slashMatch) {
+    const [, month, day, year] = slashMatch;
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  }
+
+  return raw;
+}
+
 export function getDayKey(dateString: string) {
   const date = new Date(`${dateString}T12:00:00`);
   return dayMap[date.getDay()] ?? "daily";

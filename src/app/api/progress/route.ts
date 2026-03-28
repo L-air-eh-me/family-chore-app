@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyKidPin } from "@/lib/auth";
 import { getRepository } from "@/lib/sheets";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET() {
   const repository = getRepository();
   const dashboard = await repository.getParentDashboard();
