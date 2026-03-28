@@ -18,6 +18,23 @@ export type Repository = {
   resetDay: (date?: string) => Promise<ParentDashboardData>;
 };
 
+type SheetRow = Record<string, string>;
+
+type DailyProgressSheetRow = SheetRow & {
+  date: string;
+  kid_id: string;
+  task_id?: string;
+  template_id?: string;
+  chore_title?: string;
+  status?: string;
+  started_at?: string;
+  completed?: string;
+  completed_at?: string;
+  duration_seconds?: string;
+  submitted?: string;
+  note?: string;
+};
+
 async function getSheetsClient() {
   const spreadsheetId = process.env.GOOGLE_SHEET_ID;
   const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
@@ -57,7 +74,7 @@ async function readTab(tabName: string) {
   const normalizedHeader = header.map((cell) => String(cell).trim());
 
   return rows.map((row) =>
-    normalizedHeader.reduce<Record<string, string>>((record, key, index) => {
+    normalizedHeader.reduce<SheetRow>((record, key, index) => {
       record[key] = String(row[index] ?? "").trim();
       return record;
     }, {})
@@ -84,7 +101,7 @@ async function writeDailyProgressRows(rows: string[][]) {
 async function readDailyProgressRows() {
   const rows = await readTab("DailyProgress");
 
-  return rows.map((row) => ({
+  return rows.map<DailyProgressSheetRow>((row) => ({
     ...row,
     date: normalizeDateString(row.date)
   }));
