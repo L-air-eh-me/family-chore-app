@@ -310,7 +310,7 @@ const sheetsRepository: Repository = {
         .filter((row) => row.date !== normalizedDate)
         .map((row) => [
           row.date,
-          row.kid_id,
+          row.kid_id || "",
           row.task_id || "",
           row.chore_title || "",
           row.status || "not-started",
@@ -371,7 +371,7 @@ const sheetsRepository: Repository = {
         .filter((row) => row.date !== taskSet.date)
         .map((row) => [
           row.date,
-          row.kid_id,
+          row.kid_id || "",
           row.task_id || "",
           row.chore_title || "",
           row.status || "not-started",
@@ -437,7 +437,7 @@ const sheetsRepository: Repository = {
         .filter((row) => row.date !== targetDate)
         .map((row) => [
           row.date,
-          row.kid_id,
+          row.kid_id || "",
           row.task_id || "",
           row.chore_title || "",
           row.status || "not-started",
