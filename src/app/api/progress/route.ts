@@ -6,10 +6,14 @@ import { getRepository } from "@/lib/sheets";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+const noStoreHeaders = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate"
+};
+
 export async function GET() {
   const repository = getRepository();
   const dashboard = await repository.getParentDashboard();
-  return NextResponse.json(dashboard);
+  return NextResponse.json(dashboard, { headers: noStoreHeaders });
 }
 
 export async function POST(request: NextRequest) {
@@ -49,5 +53,5 @@ export async function POST(request: NextRequest) {
   const updated = await repository.getTodayTasksForKid(body.kidId);
   const task = updated.tasks.find((entry) => entry.taskId === body.taskId);
 
-  return NextResponse.json(task);
+  return NextResponse.json(task, { headers: noStoreHeaders });
 }

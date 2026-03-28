@@ -1,9 +1,13 @@
+import { unstable_noStore as noStore } from "next/cache";
+
 import { ParentDashboard } from "@/components/ParentDashboard";
 import { getRepository } from "@/lib/sheets";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function ParentPage() {
+  noStore();
   const repository = getRepository();
   const data = await repository.getParentDashboard();
 

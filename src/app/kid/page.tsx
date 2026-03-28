@@ -47,7 +47,7 @@ export default function KidPage() {
     async function loadKids() {
       setError("");
 
-      const response = await fetch("/api/kids");
+      const response = await fetch("/api/kids", { cache: "no-store" });
 
       if (!response.ok) {
         setError(await readErrorMessage(response, "Unable to load kids."));
@@ -107,7 +107,7 @@ export default function KidPage() {
       query.set("quick", "1");
     }
 
-    const response = await fetch(`/api/chores?${query.toString()}`);
+    const response = await fetch(`/api/chores?${query.toString()}`, { cache: "no-store" });
 
     if (!response.ok) {
       setError(await readErrorMessage(response, "Unable to load chores."));

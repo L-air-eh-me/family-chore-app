@@ -6,6 +6,10 @@ import { getRepository } from "@/lib/sheets";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+const noStoreHeaders = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate"
+};
+
 export async function GET(request: NextRequest) {
   const kidId = request.nextUrl.searchParams.get("kidId");
   const pin = request.nextUrl.searchParams.get("pin");
@@ -30,5 +34,5 @@ export async function GET(request: NextRequest) {
   const repository = getRepository();
   const taskData = await repository.getTodayTasksForKid(kidId);
 
-  return NextResponse.json(taskData);
+  return NextResponse.json(taskData, { headers: noStoreHeaders });
 }
