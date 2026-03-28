@@ -3,7 +3,7 @@ import type { DayKey } from "@/lib/types";
 const dayMap: DayKey[] = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const APP_TIME_ZONE = process.env.APP_TIME_ZONE || "America/Phoenix";
 
-export function getTodayDateString() {
+export function getDateStringInAppTimeZone(value: Date | string) {
   const formatter = new Intl.DateTimeFormat("en-CA", {
     timeZone: APP_TIME_ZONE,
     year: "numeric",
@@ -11,7 +11,11 @@ export function getTodayDateString() {
     day: "2-digit"
   });
 
-  return formatter.format(new Date());
+  return formatter.format(new Date(value));
+}
+
+export function getTodayDateString() {
+  return getDateStringInAppTimeZone(new Date());
 }
 
 export function normalizeDateString(value: string | null | undefined) {

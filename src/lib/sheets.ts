@@ -1,4 +1,4 @@
-import { getTodayDateString, normalizeDateString } from "@/lib/date";
+import { getDateStringInAppTimeZone, getTodayDateString, normalizeDateString } from "@/lib/date";
 import { buildTaskSummary } from "@/lib/taskSummary";
 import type { Kid, KidTasksResponse, ParentDashboardData } from "@/lib/types";
 
@@ -107,6 +107,16 @@ async function readDailyProgressRows() {
   }));
 }
 
+function isSuspiciousCarryoverRow(row: DailyProgressSheetRow, targetDate: string) {
+  const startedDate = row.started_at ? getDateStringInAppTimeZone(row.started_at) : "";
+  const completedDate = row.completed_at ? getDateStringInAppTimeZone(row.completed_at) : "";
+
+  return Boolean(
+    (startedDate && startedDate !== targetDate) ||
+      (completedDate && completedDate !== targetDate)
+  );
+}
+
 async function buildSheetsSnapshot(date = getTodayDateString()) {
   const targetDate = normalizeDateString(date);
   const [kidsRows, templatesRows, dailyRows, oneTimeRows] = await Promise.all([
@@ -207,7 +217,7 @@ async function buildSheetsSnapshot(date = getTodayDateString()) {
       .forEach((row) => {
         const taskId = row.task_id || row.template_id || row.chore_title;
         const match = seededTasks.find((task) => task.taskId === taskId || task.title === row.chore_title);
-        if (match) {
+        if (match && !isSuspiciousCarryoverRow(row, targetDate)) {
           match.status = row.status === "in-progress" || row.status === "done" || row.status === "not-started"
             ? row.status
             : normalizeBoolean(row.completed)
