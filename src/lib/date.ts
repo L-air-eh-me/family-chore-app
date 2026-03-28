@@ -1,9 +1,17 @@
 import type { DayKey } from "@/lib/types";
 
 const dayMap: DayKey[] = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+const APP_TIME_ZONE = process.env.APP_TIME_ZONE || "America/Phoenix";
 
 export function getTodayDateString() {
-  return new Date().toISOString().slice(0, 10);
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: APP_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  });
+
+  return formatter.format(new Date());
 }
 
 export function getDayKey(dateString: string) {
@@ -13,6 +21,7 @@ export function getDayKey(dateString: string) {
 
 export function formatFriendlyDate(dateString: string) {
   return new Intl.DateTimeFormat("en-US", {
+    timeZone: APP_TIME_ZONE,
     weekday: "short",
     month: "short",
     day: "numeric"
@@ -25,6 +34,7 @@ export function formatFriendlyTime(dateString: string | null) {
   }
 
   return new Intl.DateTimeFormat("en-US", {
+    timeZone: APP_TIME_ZONE,
     hour: "numeric",
     minute: "2-digit"
   }).format(new Date(dateString));
