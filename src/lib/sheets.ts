@@ -22,7 +22,7 @@ type SheetRow = Record<string, string>;
 
 type DailyProgressSheetRow = SheetRow & {
   date: string;
-  kid_id: string;
+  kid_id?: string;
   task_id?: string;
   template_id?: string;
   chore_title?: string;
