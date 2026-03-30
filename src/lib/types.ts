@@ -1,5 +1,6 @@
 export type DayKey =
   | "daily"
+  | "weekdays"
   | "mon"
   | "tue"
   | "wed"

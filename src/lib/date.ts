@@ -49,6 +49,10 @@ export function getDayKey(dateString: string) {
   return dayMap[date.getDay()] ?? "daily";
 }
 
+export function isWeekday(dayKey: DayKey) {
+  return dayKey === "mon" || dayKey === "tue" || dayKey === "wed" || dayKey === "thu" || dayKey === "fri";
+}
+
 export function formatFriendlyDate(dateString: string) {
   return new Intl.DateTimeFormat("en-US", {
     timeZone: APP_TIME_ZONE,

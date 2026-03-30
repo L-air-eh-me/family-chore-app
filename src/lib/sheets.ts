@@ -1,4 +1,4 @@
-import { getDateStringInAppTimeZone, getTodayDateString, normalizeDateString } from "@/lib/date";
+import { getDateStringInAppTimeZone, getTodayDateString, isWeekday, normalizeDateString } from "@/lib/date";
 import { buildTaskSummary } from "@/lib/taskSummary";
 import type { Kid, KidTasksResponse, ParentDashboardData } from "@/lib/types";
 
@@ -158,7 +158,7 @@ async function buildSheetsSnapshot(date = getTodayDateString()) {
       dayOfWeek: row.day_of_week.toLowerCase(),
       required: normalizeBoolean(row.required)
     }))
-    .filter((row) => row.dayOfWeek === "daily" || row.dayOfWeek === dateDay);
+    .filter((row) => row.dayOfWeek === "daily" || row.dayOfWeek === dateDay || (row.dayOfWeek === "weekdays" && isWeekday(dateDay)));
 
   const oneTimeTasks = oneTimeRows
     .filter((row) => row.kid_id && normalizeDateString(row.date) === targetDate)

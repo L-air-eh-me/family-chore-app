@@ -148,6 +148,11 @@ kid_id | name | pin | active
 template_id | kid_id | title | category | day_of_week | required
 ```
 
+`day_of_week` supports:
+- `daily`
+- `weekdays`
+- `mon`, `tue`, `wed`, `thu`, `fri`, `sat`, `sun`
+
 ### DailyProgress
 
 Recommended stable version:

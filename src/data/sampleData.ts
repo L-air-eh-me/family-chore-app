@@ -1,4 +1,4 @@
-import { getDayKey, getTodayDateString } from "@/lib/date";
+import { getDayKey, getTodayDateString, isWeekday } from "@/lib/date";
 import { buildTaskSummary } from "@/lib/taskSummary";
 import type {
   ChoreTemplate,
@@ -64,7 +64,7 @@ function buildInitialProgress(date: string, kidId: string) {
   const dayKey = getDayKey(date);
   const recurring = choreTemplates
     .filter((template) => template.kidId === kidId)
-    .filter((template) => template.dayOfWeek === "daily" || template.dayOfWeek === dayKey)
+    .filter((template) => template.dayOfWeek === "daily" || template.dayOfWeek === dayKey || (template.dayOfWeek === "weekdays" && isWeekday(dayKey)))
     .map<DailyProgress>((template) => ({
       date,
       kidId,
