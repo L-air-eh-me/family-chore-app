@@ -1,4 +1,5 @@
-import { getDateStringInAppTimeZone, getTodayDateString, isWeekday, normalizeDateString } from "@/lib/date";
+import { getDateStringInAppTimeZone, getDayKey, getTodayDateString, isWeekday, normalizeDateString } from "@/lib/date";
+import { buildSevenDayStreak } from "@/lib/streak";
 import { buildTaskSummary } from "@/lib/taskSummary";
 import type { Kid, KidTasksResponse, ParentDashboardData } from "@/lib/types";
 
@@ -146,7 +147,7 @@ async function buildSheetsSnapshot(date = getTodayDateString()) {
   } as const;
   const dateDay = dayNames[new Date(`${targetDate}T12:00:00`).getDay() as keyof typeof dayNames];
 
-  const templates = templatesRows
+  const allTemplates = templatesRows
     .filter((row) => row.kid_id)
     .map((row, index) => ({
       templateId:
@@ -157,20 +158,50 @@ async function buildSheetsSnapshot(date = getTodayDateString()) {
       category: row.category || "Chores",
       dayOfWeek: row.day_of_week.toLowerCase(),
       required: normalizeBoolean(row.required)
-    }))
+    }));
+
+  const templates = allTemplates
     .filter((row) => row.dayOfWeek === "daily" || row.dayOfWeek === dateDay || (row.dayOfWeek === "weekdays" && isWeekday(dateDay)));
 
-  const oneTimeTasks = oneTimeRows
-    .filter((row) => row.kid_id && normalizeDateString(row.date) === targetDate)
+  const allOneTimeTasks = oneTimeRows
+    .filter((row) => row.kid_id)
     .map((row, index) => ({
-      taskId: row.task_id || `one-time-${targetDate}-${row.kid_id}-${index}`,
+      taskId: row.task_id || `one-time-${normalizeDateString(row.date)}-${row.kid_id}-${index}`,
       kidId: row.kid_id,
+      date: normalizeDateString(row.date),
       title: row.title,
       category: row.category || "Today Only",
       required: normalizeBoolean(row.required)
     }));
 
+  const oneTimeTasks = allOneTimeTasks
+    .filter((row) => row.date === targetDate);
+
   const progressRows = dailyRows.filter((row) => normalizeDateString(row.date) === targetDate);
+
+  function getRequiredTasksForDate(dateString: string, kidId: string) {
+    const dayKey = getDayKey(dateString);
+
+    return [
+      ...allTemplates.filter(
+        (template) =>
+          template.kidId === kidId &&
+          template.required &&
+          (template.dayOfWeek === "daily" ||
+            template.dayOfWeek === dayKey ||
+            (template.dayOfWeek === "weekdays" && isWeekday(dayKey)))
+      ).map((template) => ({
+        taskId: template.templateId,
+        title: template.title
+      })),
+      ...allOneTimeTasks
+        .filter((task) => task.kidId === kidId && task.required && task.date === dateString)
+        .map((task) => ({
+          taskId: task.taskId,
+          title: task.title
+        }))
+    ];
+  }
 
   const tasksByKid = new Map<string, KidTasksResponse>();
 
@@ -231,6 +262,38 @@ async function buildSheetsSnapshot(date = getTodayDateString()) {
         }
       });
 
+    const streak = buildSevenDayStreak({
+      targetDate,
+      evaluateDay: (dateToCheck) => {
+        const requiredTasks = getRequiredTasksForDate(dateToCheck, kid.kidId);
+        const progressForDay = dailyRows.filter(
+          (row) => row.kid_id === kid.kidId && normalizeDateString(row.date) === dateToCheck
+        );
+
+        return {
+          hasRequiredChores: requiredTasks.length > 0,
+          completedRequiredChores:
+            requiredTasks.length > 0 &&
+            requiredTasks.every((requiredTask) => {
+              const match = progressForDay.find((row) => {
+                const progressTaskId = row.task_id || row.template_id || row.chore_title;
+                return progressTaskId === requiredTask.taskId || row.chore_title === requiredTask.title;
+              });
+
+              return Boolean(
+                match &&
+                  !isSuspiciousCarryoverRow(match, dateToCheck) &&
+                  (match.status === "done" || normalizeBoolean(match.completed))
+              );
+            })
+        };
+      }
+    });
+    const summary = {
+      ...buildTaskSummary(seededTasks),
+      ...streak
+    };
+
     tasksByKid.set(kid.kidId, {
       date: targetDate,
       kid: {
@@ -239,7 +302,7 @@ async function buildSheetsSnapshot(date = getTodayDateString()) {
       },
       tasks: seededTasks,
       submitted: seededTasks.length > 0 && seededTasks.every((task) => task.submitted),
-      summary: buildTaskSummary(seededTasks)
+      summary
     });
   });
 
@@ -412,12 +475,7 @@ const sheetsRepository: Repository = {
 
     await writeDailyProgressRows(allRows);
 
-    return {
-      ...taskSet,
-      tasks: rows,
-      submitted: true,
-      summary: buildTaskSummary(rows)
-    };
+    return this.getTodayTasksForKid(kidId, taskSet.date);
   },
   async getParentDashboard(date) {
     const snapshot = await buildSheetsSnapshot(date);

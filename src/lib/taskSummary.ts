@@ -45,6 +45,8 @@ export function buildTaskSummary(tasks: DailyProgress[]): TaskSummary {
     totalDurationSeconds: tasks.reduce(
       (sum, task) => sum + getElapsedSeconds(task.startedAt, task.durationSeconds, task.status === "in-progress"),
       0
-    )
+    ),
+    streakDays: 0,
+    streakPercent: 0
   };
 }

@@ -78,6 +78,8 @@ export type KidSummary = {
     durationSeconds: number;
   }>;
   totalDurationSeconds: number;
+  streakDays: number;
+  streakPercent: number;
 };
 
 export type TaskSummary = {
@@ -102,6 +104,8 @@ export type TaskSummary = {
     durationSeconds: number;
   }>;
   totalDurationSeconds: number;
+  streakDays: number;
+  streakPercent: number;
 };
 
 export type ParentDashboardData = {

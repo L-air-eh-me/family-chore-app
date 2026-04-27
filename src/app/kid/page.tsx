@@ -411,6 +411,14 @@ export default function KidPage() {
 
                 <div className="mt-5 rounded-[1.4rem] bg-white px-4 py-4 text-slate-900">
                   <ProgressBar value={completionPercent} />
+                  <div className="mt-4">
+                    <ProgressBar
+                      title="7-day streak"
+                      value={taskData.summary.streakPercent}
+                      valueLabel={`${taskData.summary.streakDays}/7`}
+                      barClassName="bg-sky-500"
+                    />
+                  </div>
                   <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600">
                     <span>{taskData.summary.totalTasks} chores today</span>
                     <span>{taskData.summary.requiredTasks} required</span>

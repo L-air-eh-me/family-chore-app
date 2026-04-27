@@ -56,6 +56,19 @@ export function KidCard({ kid }: KidCardProps) {
         />
       </div>
 
+      <div className="mt-4 rounded-2xl bg-slate-50 px-3 py-3">
+        <div className="flex items-center justify-between text-sm font-medium text-slate-700">
+          <span>7-day streak</span>
+          <span>{kid.streakDays}/7</span>
+        </div>
+        <div className="mt-2 h-3 overflow-hidden rounded-full bg-slate-200">
+          <div
+            className="h-full rounded-full bg-sky-500 transition-all duration-300"
+            style={{ width: `${kid.streakPercent}%` }}
+          />
+        </div>
+      </div>
+
       <div className="mt-4 border-t border-slate-100 pt-4">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Needs attention</p>
         {kid.missingChores.length > 0 ? (

@@ -1,4 +1,5 @@
 import { getDayKey, getTodayDateString, isWeekday } from "@/lib/date";
+import { buildSevenDayStreak } from "@/lib/streak";
 import { buildTaskSummary } from "@/lib/taskSummary";
 import type {
   ChoreTemplate,
@@ -108,6 +109,10 @@ function buildInitialProgress(date: string, kidId: string) {
   });
 }
 
+function getAssignedTasksForDate(date: string, kidId: string) {
+  return buildInitialProgress(date, kidId);
+}
+
 function ensureDailyProgress(date: string, kidId: string) {
   const storeKey = buildStoreKey(date, kidId);
   const existing = progressStore.get(storeKey);
@@ -142,6 +147,25 @@ export function getTodayTasksForKid(kidId: string, date = getTodayDateString()):
   }
 
   const tasks = ensureDailyProgress(date, kidId);
+  const streak = buildSevenDayStreak({
+    targetDate: date,
+    evaluateDay: (dateToCheck) => {
+      const assignedTasks = getAssignedTasksForDate(dateToCheck, kidId);
+      const requiredTasks = assignedTasks.filter((task) => task.required);
+      const progressTasks = progressStore.get(buildStoreKey(dateToCheck, kidId)) ?? assignedTasks;
+
+      return {
+        hasRequiredChores: requiredTasks.length > 0,
+        completedRequiredChores:
+          requiredTasks.length > 0 &&
+          progressTasks.filter((task) => task.required).every((task) => task.status === "done")
+      };
+    }
+  });
+  const summary = {
+    ...buildTaskSummary(tasks),
+    ...streak
+  };
 
   return {
     date,
@@ -151,7 +175,7 @@ export function getTodayTasksForKid(kidId: string, date = getTodayDateString()):
     },
     tasks,
     submitted: tasks.length > 0 && tasks.every((task) => task.submitted),
-    summary: buildTaskSummary(tasks)
+    summary
   };
 }
 
@@ -233,7 +257,25 @@ export function resetDay(date = getTodayDateString()) {
 export function getParentDashboard(date = getTodayDateString()): ParentDashboardData {
   const summaries = listKids().map((kid) => {
     const tasks = ensureDailyProgress(date, kid.kidId);
-    const summary = buildTaskSummary(tasks);
+    const streak = buildSevenDayStreak({
+      targetDate: date,
+      evaluateDay: (dateToCheck) => {
+        const assignedTasks = getAssignedTasksForDate(dateToCheck, kid.kidId);
+        const requiredTasks = assignedTasks.filter((task) => task.required);
+        const progressTasks = progressStore.get(buildStoreKey(dateToCheck, kid.kidId)) ?? assignedTasks;
+
+        return {
+          hasRequiredChores: requiredTasks.length > 0,
+          completedRequiredChores:
+            requiredTasks.length > 0 &&
+            progressTasks.filter((task) => task.required).every((task) => task.status === "done")
+        };
+      }
+    });
+    const summary = {
+      ...buildTaskSummary(tasks),
+      ...streak
+    };
 
     return {
       kidId: kid.kidId,
