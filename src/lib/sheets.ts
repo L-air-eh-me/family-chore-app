@@ -481,8 +481,9 @@ const sheetsRepository: Repository = {
     const snapshot = await buildSheetsSnapshot(date);
     const kids = snapshot.activeKids.map((kid) => {
       const taskSet = snapshot.tasksByKid.get(kid.kidId);
-      const tasks = taskSet?.tasks ?? [];
-      const summary = buildTaskSummary(tasks);
+      const summary =
+        taskSet?.summary ??
+        buildTaskSummary(taskSet?.tasks ?? []);
 
       return {
         kidId: kid.kidId,
